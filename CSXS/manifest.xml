@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="6.0" ExtensionBundleId="com.pathconverter" ExtensionBundleVersion="1.0.0">
+<ExtensionManifest Version="12.0" ExtensionBundleId="com.pathconverter" ExtensionBundleVersion="1.0.0">
     <ExtensionList>
         <Extension Id="com.pathconverter.panel" Version="1.0" />
     </ExtensionList>
@@ -18,8 +18,8 @@
         <Extension Id="com.pathconverter.panel">
             <DispatchInfo>
                 <Resources>
-                    <MainPath>./index.html</MainPath>
-                    <ScriptPath>./js/main.jsx</ScriptPath>
+                    <MainPath>./host/index.html</MainPath>
+                    <ScriptPath>./client/main.jsx</ScriptPath>
                 </Resources>
                 <Lifecycle>
                     <AutoVisible>true</AutoVisible>

@@ -4,7 +4,14 @@
     <meta charset="utf-8">
     <title>OrbitTools</title>
     <link rel="stylesheet" href="../client/style.css">
-    <script src="../lib/CSInterface.js"></script>
+    <script src="lib/CSInterface.js"></script>
+    <script>
+        // 디버그 콘솔 활성화
+        window.onerror = function(msg, url, line) {
+            console.error(`Error: ${msg}\nURL: ${url}\nLine: ${line}`);
+            return false;
+        };
+    </script>
 </head>
 <body>
     <div class="header">
@@ -27,11 +34,18 @@
         <div class="file-list" id="fileList">
             <div class="notification-overlay" id="notificationOverlay"></div>
             <div class="notification" id="notification"></div>
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+            </div>
             <div class="selected-item" id="selectedItem">
                 <div class="no-selection">No item selected</div>
             </div>
         </div>
         <div class="button-container">
+            <button id="createSrcBtn">
+                <span class="button-text">Create src Folder</span>
+                <span class="loading-spinner hidden"></span>
+            </button>
             <button id="convertBtn">
                 <span class="button-text">Convert to Relative Path</span>
                 <span class="loading-spinner hidden"></span>

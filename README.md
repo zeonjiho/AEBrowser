@@ -1,5 +1,11 @@
 # OrbitTools
 
+#수정사항 목록
+* 오류 메시지 한글화
+* Project status 작동 안 됨 - 1st
+* 모든 행동에 대해 상황판단이 제대로 되고있지 않음
+이 두개 먼저 해결
+
 After Effects용 경로 관리 및 동기화 확장 프로그램입니다.
 Path management and synchronization extension for After Effects.
 
