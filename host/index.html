@@ -4,13 +4,22 @@
     <meta charset="utf-8">
     <title>OrbitTools</title>
     <link rel="stylesheet" href="../client/style.css">
+<<<<<<< Updated upstream
     <script src="../lib/CSInterface.js"></script>
+=======
+    <script src="lib/CSInterface.js"></script>
+    <script>
+        window.onerror = function(msg, url, line) {
+            console.error(`Error: ${msg}\nURL: ${url}\nLine: ${line}`);
+            return false;
+        };
+    </script>
+>>>>>>> Stashed changes
 </head>
 <body>
     <div class="header">
         <h1>
-            OrbitTools AE
-            <div class="version">v1.0.0</div>
+            OrbitTools™</span>
         </h1>
         <div class="author">
             <span>HYPER</span>
@@ -19,9 +28,26 @@
     <div class="container">
         <div class="project-info">
             <div class="status">
-                Project Status: 
-                <span id="projectStatus">No Project</span>
-                <span class="status-indicator" id="srcStatus"></span>
+                <div class="status-left">
+                    Project Status: 
+                    <span id="projectStatus">No Project</span>
+                    <span class="status-indicator" id="srcStatus"></span>
+                </div>
+                <div class="status-buttons">
+                    <span id="lastSync" class="last-sync-info"></span>
+                    <button class="icon-button" id="createOrbBtn" title="Add orbitools">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        <span class="loading-spinner hidden"></span>
+                    </button>
+                    <button class="icon-button" id="syncBtn" title="Sync src folder">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                        </svg>
+                        <span class="loading-spinner hidden"></span>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="file-list" id="fileList">
@@ -36,12 +62,13 @@
                 <span class="button-text">Convert to Relative Path</span>
                 <span class="loading-spinner hidden"></span>
             </button>
-            <button id="syncBtn">
-                <span class="button-text">Sync src Folder</span>
-                <span class="loading-spinner hidden"></span>
-            </button>
         </div>
     </div>
+<<<<<<< Updated upstream
     <script src="./client/main.jsx"></script>
+=======
+    <div class="version-info">v0.0.1</div>
+    <script src="../client/main.jsx"></script>
+>>>>>>> Stashed changes
 </body>
 </html> 

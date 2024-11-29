@@ -20,6 +20,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-bottom: 30px;
 }
 
 .header {
@@ -73,8 +74,35 @@ body {
 
 .status {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px;
+}
+
+.status-left {
+    display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.status-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.last-sync-info {
+    font-size: 11px;
+    color: #666;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+/* 다크 테마 대응 */
+@media (prefers-color-scheme: dark) {
+    .last-sync-info {
+        color: #999;
+    }
 }
 
 .status span {
@@ -338,3 +366,109 @@ button:disabled .loading-spinner {
     }
 }
 
+<<<<<<< Updated upstream
+=======
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.loading-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.loading-overlay .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #666;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.icon-button {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    background: #3a3a3a;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.icon-button:hover {
+    background: #4a4a4a;
+}
+
+.icon-button svg {
+    width: 16px;
+    height: 16px;
+    fill: #ffffff;
+}
+
+.icon-button:disabled {
+    background: #333;
+    cursor: not-allowed;
+}
+
+.icon-button:disabled svg {
+    fill: #666;
+}
+
+.icon-button .loading-spinner {
+    width: 14px;
+    height: 14px;
+    border-width: 1.5px;
+}
+
+.icon-button.disabled {
+    background: #2a2a2a;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.icon-button.disabled:hover {
+    background: #2a2a2a;
+}
+
+.icon-button.disabled svg {
+    fill: #666;
+}
+
+/* 로딩 상태일 때의 스타일 */
+.icon-button:disabled:not(.disabled) {
+    opacity: 0.8;
+    cursor: wait;
+}
+
+.version-info {
+    position: fixed;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #666;
+    pointer-events: none;
+}
+
+>>>>>>> Stashed changes
