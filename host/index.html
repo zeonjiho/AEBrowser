@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>OrbitTools</title>
+    <link rel="stylesheet" href="../client/style.css">
+    <script src="../lib/CSInterface.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            OrbitTools AE
+            <div class="version">v1.0.0</div>
+        </h1>
+        <div class="author">
+            <span>HYPER</span>
+        </div>
+    </div>
+    <div class="container">
+        <div class="project-info">
+            <div class="status">
+                Project Status: 
+                <span id="projectStatus">No Project</span>
+                <span class="status-indicator" id="srcStatus"></span>
+            </div>
+        </div>
+        <div class="file-list" id="fileList">
+            <div class="notification-overlay" id="notificationOverlay"></div>
+            <div class="notification" id="notification"></div>
+            <div class="selected-item" id="selectedItem">
+                <div class="no-selection">No item selected</div>
+            </div>
+        </div>
+        <div class="button-container">
+            <button id="convertBtn">
+                <span class="button-text">Convert to Relative Path</span>
+                <span class="loading-spinner hidden"></span>
+            </button>
+            <button id="syncBtn">
+                <span class="button-text">Sync src Folder</span>
+                <span class="loading-spinner hidden"></span>
+            </button>
+        </div>
+    </div>
+    <script src="../client/main.jsx"></script>
+</body>
+</html> 

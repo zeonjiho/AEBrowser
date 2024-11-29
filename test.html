@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>OrbitTools</title>
+    <link rel="stylesheet" href="client/style.css">
+    <style>
+        /* 디버그 패널 스타일만 유지 */
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #3a3a3a;
+            min-width: 300px;
+            z-index: 1000;
+        }
+        
+        .debug-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+        }
+        
+        .debug-section {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .debug-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .debug-section > div {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            justify-content: center;
+        }
+        
+        .debug-button {
+            background: #333;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 2px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .debug-button:hover {
+            background: #444;
+        }
+        
+        .debug-button.active {
+            background: #4CAF50;
+        }
+        
+        .debug-note {
+            text-align: center;
+            width: 100%;
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* 메인 컨테이너 여백 */
+        .container {
+            margin-bottom: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            OrbitTools
+            <div class="version">v1.0.0</div>
+        </h1>
+        <div class="author">
+            <span>HYPER</span>
+        </div>
+    </div>
+    <div class="container">
+        <div class="project-info">
+            <div class="status">
+                Project Status: 
+                <span id="projectStatus">No Project</span>
+                <span class="status-indicator" id="srcStatus"></span>
+            </div>
+        </div>
+        <div class="file-list" id="fileList">
+            <div class="notification-overlay" id="notificationOverlay"></div>
+            <div class="notification" id="notification"></div>
+            <div class="selected-item" id="selectedItem">
+                <div class="no-selection">No item selected</div>
+            </div>
+        </div>
+        <div class="button-container">
+            <button id="convertBtn">
+                <span class="button-text">Convert to Relative Path</span>
+                <span class="loading-spinner hidden"></span>
+            </button>
+            <button id="syncBtn">
+                <span class="button-text">Sync src Folder</span>
+                <span class="loading-spinner hidden"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h3>Debug Controls</h3>
+        <div class="debug-section">
+            <div>Project Status:</div>
+            <button class="debug-button" onclick="setProjectStatus('no-project')">No Project</button>
+            <button class="debug-button" onclick="setProjectStatus('test-project')">Test.aep</button>
+        </div>
+        <div class="debug-section">
+            <div>Src Folder:</div>
+            <button class="debug-button" onclick="toggleSrcFolder()">Toggle Src Folder</button>
+        </div>
+        <div class="debug-section">
+            <div>Selected Item:</div>
+            <button class="debug-button" onclick="setSelectedItem('none')">No Selection</button>
+            <button class="debug-button" onclick="setSelectedItem('image')">Image Selected</button>
+            <button class="debug-button" onclick="setSelectedItem('no-source')">No Source Path</button>
+        </div>
+        <div class="debug-section">
+            <div>Operation Result:</div>
+            <div class="result-type">
+                <button class="debug-button" onclick="setOperationResult('success')">Success</button>
+                <button class="debug-button" onclick="setOperationResult('error')">Error</button>
+            </div>
+            <div>
+                <button class="debug-button" onclick="simulateOperation('convert')">Test Convert</button>
+                <button class="debug-button" onclick="simulateOperation('sync')">Test Sync</button>
+            </div>
+        </div>
+        <div>
+            <div>Drag & Drop:</div>
+            <div class="debug-note">Try dragging files into the selected item area</div>
+        </div>
+    </div>
+
+    <script>
+        // 프로젝트 상태 설정
+        function setProjectStatus(status) {
+            const statusElement = document.getElementById('projectStatus');
+            const indicator = document.getElementById('srcStatus');
+            
+            if (status === 'no-project') {
+                statusElement.textContent = 'No Project (Save project first)';
+                indicator.className = 'status-indicator inactive';
+            } else {
+                statusElement.textContent = 'Test.aep';
+                indicator.className = 'status-indicator ' + (hasSrcFolder ? 'active' : 'inactive');
+            }
+        }
+
+        // src 폴더 상태
+        let hasSrcFolder = false;
+        
+        // src 폴더 토글
+        function toggleSrcFolder() {
+            hasSrcFolder = !hasSrcFolder;
+            const indicator = document.getElementById('srcStatus');
+            indicator.className = 'status-indicator ' + (hasSrcFolder ? 'active' : 'inactive');
+        }
+
+        // 선택된 아이템 설정
+        function setSelectedItem(type) {
+            const selectedItemElement = document.getElementById('selectedItem');
+            
+            switch(type) {
+                case 'none':
+                    selectedItemElement.innerHTML = '<div class="no-selection">No item selected</div>';
+                    break;
+                case 'image':
+                    selectedItemElement.innerHTML = `
+                        <div class="item-info">
+                            <div class="item-name">test_image.png</div>
+                            <div class="path-info">
+                                <div class="current-path">
+                                    <span class="path-label">Current:</span>
+                                    C:/Users/Desktop/project/test_image.png
+                                </div>
+                                <div class="new-path">
+                                    <span class="path-label">New:</span>
+                                    C:/Users/Desktop/project/src/test_image.png
+                                </div>
+                            </div>
+                            <div class="item-specs">
+                                <div class="spec-item">
+                                    Format:<span>PNG</span>
+                                </div>
+                                <div class="spec-item">
+                                    Size:<span>1920 x 1080</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'no-source':
+                    selectedItemElement.innerHTML = `
+                        <div class="item-info">
+                            <div class="item-name">Image without source</div>
+                            <div class="path-info">
+                                <div class="current-path">
+                                    <span class="path-label">Current:</span>
+                                    No source path
+                                </div>
+                                <div class="new-path">
+                                    <span class="path-label">New:</span>
+                                    No source path
+                                </div>
+                            </div>
+                            <div class="item-specs">
+                                <div class="spec-item">
+                                    Format:<span>N/A</span>
+                                </div>
+                                <div class="spec-item">
+                                    Size:<span>0 x 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            setupDragAndDrop(selectedItemElement);
+        }
+
+        // 드래그 앤 드롭 설정
+        function setupDragAndDrop(element) {
+            element.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                element.classList.add('drag-over');
+            });
+
+            element.addEventListener('dragleave', () => {
+                element.classList.remove('drag-over');
+            });
+
+            element.addEventListener('drop', (e) => {
+                e.preventDefault();
+                element.classList.remove('drag-over');
+                showNotification('File imported successfully.', 'success');
+                setSelectedItem('image');
+            });
+        }
+
+        // 알림 표이머 ID 저장 변수
+        let notificationTimer = null;
+
+        // 알림 표시 함수
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const overlay = document.getElementById('notificationOverlay');
+            
+            // 이전 타이머가 있다면 제거
+            if (notificationTimer) {
+                clearTimeout(notificationTimer);
+                notification.classList.remove('show');
+                overlay.classList.remove('show');
+            }
+            
+            const iconSVG = type === 'success' 
+                ? '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>'
+                : '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>';
+            
+            notification.innerHTML = `
+                <div class="icon">${iconSVG}</div>
+                <div class="message">${message}</div>
+            `;
+            
+            notification.className = `notification ${type}`;
+            overlay.classList.add('show');
+            
+            // 강제 리플로우
+            notification.offsetHeight;
+            
+            notification.classList.add('show');
+            
+            // 새로운 타이머 설정
+            notificationTimer = setTimeout(() => {
+                notification.classList.remove('show');
+                overlay.classList.remove('show');
+                notificationTimer = null;
+            }, 780);
+        }
+
+        // 작업 결과 설정
+        function setOperationResult(type) {
+            showNotification(
+                type === 'success' ? 'Operation completed successfully.' : 'An error occurred.',
+                type
+            );
+        }
+
+        // 작업 시뮬레이션
+        function simulateOperation(type) {
+            const buttonId = type === 'convert' ? 'convertBtn' : 'syncBtn';
+            const button = document.getElementById(buttonId);
+            const spinner = button.querySelector('.loading-spinner');
+            
+            button.disabled = true;
+            spinner.classList.remove('hidden');
+            
+            setTimeout(() => {
+                button.disabled = false;
+                spinner.classList.add('hidden');
+                showNotification(
+                    type === 'convert' 
+                        ? 'File copied to src folder and path changed.' 
+                        : '2 files synchronized.',
+                    'success'
+                );
+            }, 100);
+        }
+
+        // 버튼 이벤트 리스너 추가
+        document.getElementById('convertBtn').addEventListener('click', function() {
+            simulateOperation('convert');
+        });
+
+        document.getElementById('syncBtn').addEventListener('click', function() {
+            simulateOperation('sync');
+        });
+
+        // 초기 상태 설정
+        setProjectStatus('no-project');
+        setSelectedItem('none');
+    </script>
+</body>
+</html> 
