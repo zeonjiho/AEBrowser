@@ -14,7 +14,7 @@
     
     /* 버튼 색상 */
     --button-bg: #1f1f1f;
-    --button-hover: #5a5a5a;
+    --button-hover: #313131;
     --button-disabled: #333333;
     
     /* 텍스트 색상 */
@@ -39,15 +39,16 @@ body {
     font-family: Arial, sans-serif;
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
+    overflow: hidden; /* 스크롤 방지 추가 */
 }
 
 .container {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding-bottom: 30px;
     position: relative;
-    min-height: calc(100vh - 20px);
+    min-height: calc(100vh - 40px);
+    overflow: hidden; /* 스크롤 방지 추가 */
 }
 
 .header {
@@ -191,16 +192,26 @@ button {
     flex: 1;
     padding: 8px 12px;
     background-color: var(--button-bg);
-    border: none;
+    border: 1px solid #00c85300;
     color: var(--text-primary);
     border-radius: 20px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease-out;
 }
 
 button .material-icons-round {
-    font-size: 20px;  /* 아이콘 크기 */
+    font-size: 18px;  /* 20px에서 18px로 축소 */
     transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; /* 너비 고정 */
+    height: 18px; /* 높이 고정 */
+}
+
+/* 싱크 버튼 아이콘 특별 처리 */
+#syncBtn .material-icons-round {
+    font-size: 22px; /* 싱크 아이콘만 더 작게 */
 }
 
 button .button-text {
@@ -211,6 +222,7 @@ button .button-text {
 /* 호버 효과 */
 button:hover {
     background-color: var(--button-hover);
+    border: 1px solid #43ff32;
 }
 
 button:hover .material-icons-round {

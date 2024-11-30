@@ -151,6 +151,34 @@
     </div>
 
     <script>
+        // CSInterface 모의 객체
+        const csInterface = {
+            evalScript: function(script, callback) {
+                console.log('Mock evalScript called with:', script);
+                setTimeout(() => {
+                    if (script.includes('app.project')) {
+                        callback(JSON.stringify({
+                            project: {
+                                exists: true,
+                                saved: true,
+                                path: "C:/Test/Project.aep",
+                                items: 3
+                            },
+                            items: [{
+                                index: 1,
+                                name: "test_image.png",
+                                type: "FootageItem",
+                                filePath: "C:/Test/orbitools/src/test_image.png",
+                                fileExists: true
+                            }]
+                        }));
+                    } else {
+                        callback('{"success": true}');
+                    }
+                }, 500);
+            }
+        };
+
         // 프로젝트 상태 설정
         function setProjectStatus(status) {
             const statusElement = document.getElementById('projectStatus');
@@ -190,11 +218,11 @@
                             <div class="path-info">
                                 <div class="current-path">
                                     <span class="path-label">Current:</span>
-                                    C:/Users/Desktop/project/test_image.png
+                                    C:/Test/Project/test_image.png
                                 </div>
                                 <div class="new-path">
                                     <span class="path-label">New:</span>
-                                    C:/Users/Desktop/project/src/test_image.png
+                                    ./orbitools/src/test_image.png
                                 </div>
                             </div>
                             <div class="item-specs">
@@ -211,23 +239,11 @@
                 case 'no-source':
                     selectedItemElement.innerHTML = `
                         <div class="item-info">
-                            <div class="item-name">Image without source</div>
+                            <div class="item-name">Missing Source File</div>
                             <div class="path-info">
                                 <div class="current-path">
-                                    <span class="path-label">Current:</span>
-                                    No source path
-                                </div>
-                                <div class="new-path">
-                                    <span class="path-label">New:</span>
-                                    No source path
-                                </div>
-                            </div>
-                            <div class="item-specs">
-                                <div class="spec-item">
-                                    Format:<span>N/A</span>
-                                </div>
-                                <div class="spec-item">
-                                    Size:<span>0 x 0</span>
+                                    <span class="path-label">Status:</span>
+                                    Source file not found
                                 </div>
                             </div>
                         </div>
@@ -257,7 +273,7 @@
             });
         }
 
-        // 알림 표이머 ID 저장 변수
+        // 알림 표이머 ID 저장 변���
         let notificationTimer = null;
 
         // 알림 표시 함수
@@ -308,22 +324,30 @@
         // 작업 시뮬레이션
         function simulateOperation(type) {
             const buttonId = type === 'convert' ? 'convertBtn' : 'syncBtn';
-            const button = document.getElementById(buttonId);
-            const spinner = button.querySelector('.loading-spinner');
-            
-            button.disabled = true;
-            spinner.classList.remove('hidden');
+            setButtonLoading(buttonId, true);
             
             setTimeout(() => {
-                button.disabled = false;
-                spinner.classList.add('hidden');
+                setButtonLoading(buttonId, false);
                 showNotification(
                     type === 'convert' 
-                        ? 'File copied to src folder and path changed.' 
-                        : '2 files synchronized.',
+                        ? 'Path converted to relative successfully' 
+                        : 'Files synchronized successfully',
                     'success'
                 );
-            }, 100);
+            }, 500);
+        }
+
+        // 버튼 로딩 상태 설정
+        function setButtonLoading(buttonId, isLoading) {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+            
+            button.disabled = isLoading;
+            button.classList.toggle('loading', isLoading);
+            const spinner = button.querySelector('.loading-spinner');
+            if (spinner) {
+                spinner.classList.toggle('hidden', !isLoading);
+            }
         }
 
         // 버튼 이벤트 리스너 추가
@@ -336,8 +360,10 @@
         });
 
         // 초기 상태 설정
-        setProjectStatus('no-project');
-        setSelectedItem('none');
+        document.addEventListener('DOMContentLoaded', () => {
+            setProjectStatus('no-project');
+            setSelectedItem('none');
+        });
     </script>
 </body>
 </html> 
