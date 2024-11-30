@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="12.0" ExtensionBundleId="com.pathconverter" ExtensionBundleVersion="1.0.0">
+<ExtensionManifest Version="6.0" ExtensionBundleId="com.hyper.orbittools" ExtensionBundleVersion="1.0.0">
     <ExtensionList>
-        <Extension Id="com.pathconverter.panel" Version="1.0" />
+        <Extension Id="com.hyper.orbittools" Version="1.0.0" />
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
@@ -11,26 +11,28 @@
             <Locale Code="All" />
         </LocaleList>
         <RequiredRuntimeList>
-            <RequiredRuntime Name="CSXS" Version="12.0" />
+            <RequiredRuntime Name="CSXS" Version="6.0" />
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.pathconverter.panel">
+        <Extension Id="com.hyper.orbittools">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./host/index.html</MainPath>
-                    <ScriptPath>./client/main.jsx</ScriptPath>
+                    <CEFCommandLine />
                 </Resources>
                 <Lifecycle>
                     <AutoVisible>true</AutoVisible>
                 </Lifecycle>
                 <UI>
                     <Type>Panel</Type>
-                    <Menu>Path Converter</Menu>
+                    <Menu>OrbitTools</Menu>
                     <Geometry>
                         <Size>
                             <Height>300</Height>
-                            <Width>400</Width>
+                            <Width>300</Width>
+                            <MinW>240</MinW>
+                            <MinH>200</MinH>
                         </Size>
                     </Geometry>
                 </UI>

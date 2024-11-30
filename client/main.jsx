@@ -1,4 +1,48 @@
-var csInterface = new CSInterface();
+var csInterface = null;
+
+function initializeCSInterface() {
+    try {
+        if (csInterface !== null && csInterface.hostEnvironment) {
+            return true;
+        }
+
+        if (typeof CSInterface === 'undefined') {
+            console.error('CSInterface is not loaded yet');
+            return false;
+        }
+
+        csInterface = new CSInterface();
+        
+        if (!csInterface.hostEnvironment) {
+            console.error('Host environment not available');
+            csInterface = null;
+            return false;
+        }
+
+        csInterface.evalScript('app.version', function(result) {
+            console.log('AE Version:', result || 'Not available');
+        });
+
+        console.log('CSInterface initialized successfully');
+        return true;
+    } catch(e) {
+        console.error('CSInterface initialization failed:', e);
+        csInterface = null;
+        return false;
+    }
+}
+
+window.addEventListener('load', function() {
+    console.log('Window loaded');
+    setTimeout(function() {
+        if (initializeCSInterface()) {
+            console.log('CSInterface initialized successfully');
+            init();
+        } else {
+            console.error('Failed to initialize CSInterface');
+        }
+    }, 100);
+});
 
 function init() {
     console.log("Initializing extension...");
@@ -8,6 +52,7 @@ function init() {
         var createSrcBtn = document.getElementById('createSrcBtn');
         var convertBtn = document.getElementById('convertBtn');
         var syncBtn = document.getElementById('syncBtn');
+        var openOrbitBtn = document.getElementById('openOrbitBtn');
 
         if (createSrcBtn) {
             createSrcBtn.addEventListener('click', function() {
@@ -36,6 +81,15 @@ function init() {
             console.error("SyncBtn not found");
         }
 
+        if (openOrbitBtn) {
+            openOrbitBtn.addEventListener('click', function() {
+                console.log("Open orbit button clicked");
+                openOrbitFolder();
+            });
+        } else {
+            console.error("OpenOrbitBtn not found");
+        }
+
         // Start monitoring
         initProjectMonitoring();
         monitorSelection();
@@ -44,35 +98,58 @@ function init() {
     } catch(e) {
         console.error("Initialization error:", e);
     }
+
+    // 디버그 버튼 이벤트 리스너 추가
+    var debugBtn = document.getElementById('debugBtn');
+    if (debugBtn) {
+        debugBtn.addEventListener('click', function() {
+            collectDebugInfo();
+        });
+    }
 }
 
-// Delay function
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+// Delay function - Promise 대신 콜백 기반으로 수정
+function delay(ms, callback) {
+    setTimeout(callback, ms);
 }
 
 // Manage button loading state
 function setButtonLoading(buttonId, isLoading) {
-    const button = document.getElementById(buttonId);
-    if (!button) {
-        console.error("Button with id " + buttonId + " not found");
-        return;
-    }
-    const spinner = button.querySelector('.loading-spinner');
-    if (!spinner) {
-        console.error("Spinner element not found in button " + buttonId);
-        return;
-    }
-    button.disabled = isLoading;
-    if (isLoading) {
-        spinner.classList.remove('hidden');
-    } else {
-        spinner.classList.add('hidden');
+    try {
+        console.log("setButtonLoading called with:", buttonId, isLoading);
+        const button = document.getElementById(buttonId);
+        if (!button) {
+            console.error("Button with id " + buttonId + " not found");
+            return;
+        }
+        
+        // 버튼 상태 업데이트
+        button.disabled = isLoading;
+        button.classList.toggle('loading', isLoading);
+        
+        // spinner 요소 찾기
+        const spinner = button.querySelector('.loading-spinner');
+        const textSpan = button.querySelector('.button-text');
+        
+        if (spinner && textSpan) {
+            if (isLoading) {
+                spinner.classList.remove('hidden');
+                textSpan.style.opacity = '0.7';
+            } else {
+                spinner.classList.add('hidden');
+                textSpan.style.opacity = '1';
+            }
+        }
+    } catch(e) {
+        console.error("Error in setButtonLoading:", e);
     }
 }
 
-// Notification timer
-let notificationTimer = null;
+// Notification timer 및 관련 상태 관리
+const notificationState = {
+    timer: null,
+    isShowing: false
+};
 
 // Show notification
 function showNotification(message, type) {
@@ -85,11 +162,11 @@ function showNotification(message, type) {
     }
 
     // Clear any existing timer
-    if (notificationTimer) {
-        clearTimeout(notificationTimer);
+    if (notificationState.timer) {
+        clearTimeout(notificationState.timer);
         notification.classList.remove('show');
         overlay.classList.remove('show');
-        notificationTimer = null;
+        notificationState.timer = null;
     }
 
     const iconSVG = type === 'success'
@@ -108,12 +185,14 @@ function showNotification(message, type) {
     notification.offsetHeight;
 
     notification.classList.add('show');
+    notificationState.isShowing = true;
 
     // Set timer to hide notification
-    notificationTimer = setTimeout(() => {
+    notificationState.timer = setTimeout(() => {
         notification.classList.remove('show');
         overlay.classList.remove('show');
-        notificationTimer = null;
+        notificationState.timer = null;
+        notificationState.isShowing = false;
     }, 780); // Duration
 }
 
@@ -131,198 +210,266 @@ function setFileListLoading(isLoading) {
 }
 
 // Convert to relative path
-async function convertToRelativePath() {
+function convertToRelativePath() {
     try {
         setButtonLoading('convertBtn', true);
         setFileListLoading(true);
-        await delay(100);
+        
+        delay(100, function() {
+            csInterface.evalScript(`
+                (function() {
+                    try {
+                        if (!app.project || !app.project.file) {
+                            return JSON.stringify({error: 'NO_PROJECT'});
+                        }
 
-        csInterface.evalScript(`
-            (function() {
-                try {
-                    if (!app.project || !app.project.file) {
-                        return JSON.stringify({error: 'NO_PROJECT'});
-                    }
+                        var projectPath = app.project.file.parent.fsName;
+                        var orbitoolsPath = projectPath + '/orbitools';
+                        var srcPath = orbitoolsPath + '/src';
 
-                    var projectPath = app.project.file.parent.fsName;
-                    var orbitoolsPath = projectPath + '/orbitools';
-                    var srcPath = orbitoolsPath + '/src';
+                        // Get selected item
+                        var activeItem = app.project.activeItem;
+                        if (!activeItem || !(activeItem instanceof FootageItem)) {
+                            return JSON.stringify({error: 'NO_VALID_ITEM'});
+                        }
 
-                    // Get selected item
-                    var activeItem = app.project.activeItem;
-                    if (!activeItem || !(activeItem instanceof FootageItem)) {
-                        return JSON.stringify({error: 'NO_VALID_ITEM'});
-                    }
+                        // Check for source file
+                        if (!activeItem.mainSource || !activeItem.mainSource.file) {
+                            return JSON.stringify({error: 'NO_SOURCE_FILE'});
+                        }
 
-                    // Check for source file
-                    if (!activeItem.mainSource || !activeItem.mainSource.file) {
-                        return JSON.stringify({error: 'NO_SOURCE_FILE'});
-                    }
+                        var sourceFile = activeItem.mainSource.file;
+                        var fileName = sourceFile.name;
+                        var srcFile = new File(srcPath + '/' + fileName);
 
-                    var sourceFile = activeItem.mainSource.file;
-                    var fileName = sourceFile.name;
-                    var srcFile = new File(srcPath + '/' + fileName);
+                        // Check if file is already in src folder
+                        if (sourceFile.fsName.indexOf(srcPath) === 0) {
+                            return JSON.stringify({error: 'ALREADY_IN_SRC'});
+                        }
 
-                    // Check if file is already in src folder
-                    if (sourceFile.fsName.indexOf(srcPath) === 0) {
+                        // Create src folder if it doesn't exist
+                        var srcFolder = new Folder(srcPath);
+                        if (!srcFolder.exists) {
+                            if (!srcFolder.create()) {
+                                return JSON.stringify({error: 'FAILED_TO_CREATE_SRC'});
+                            }
+                        }
+
+                        // Copy file to src folder
+                        if (!sourceFile.copy(srcFile.fsName)) {
+                            return JSON.stringify({error: 'FAILED_TO_COPY'});
+                        }
+
+                        // Update footage path
+                        activeItem.replace(srcFile);
+                        
                         return JSON.stringify({
-                            error: 'ALREADY_IN_SRC'
+                            success: true,
+                            oldPath: sourceFile.fsName,
+                            newPath: srcFile.fsName
+                        });
+                    } catch(e) {
+                        $.writeln("Error: " + e.toString());  // 로그 추가
+                        return JSON.stringify({
+                            error: 'SCRIPT_ERROR',
+                            message: e.toString()
                         });
                     }
-
-                    // Ensure src folder exists
-                    var srcFolder = new Folder(srcPath);
-                    if (!srcFolder.exists) {
-                        if (!srcFolder.create()) {
-                            return JSON.stringify({error: 'FAILED_TO_CREATE_SRC'});
+                })()
+            `, function(result) {
+                setButtonLoading('convertBtn', false);
+                setFileListLoading(false);
+                
+                try {
+                    console.log("Received result:", result);  // 디버깅용 로그
+                    const response = JSON.parse(result);
+                    
+                    if (response.error) {
+                        switch(response.error) {
+                            case 'NO_PROJECT':
+                                showNotification('The project is not saved.', 'error');
+                                break;
+                            case 'NO_VALID_ITEM':
+                                showNotification('No valid item selected', 'error');
+                                break;
+                            case 'NO_SOURCE_FILE':
+                                showNotification('No source file', 'error');
+                                break;
+                            case 'ALREADY_IN_SRC':
+                                showNotification('Already in src folder', 'error');
+                                break;
+                            case 'FAILED_TO_CREATE_SRC':
+                                showNotification('Failed to create src folder', 'error');
+                                break;
+                            case 'FAILED_TO_COPY':
+                                showNotification('Failed to copy file', 'error');
+                                break;
+                            case 'SCRIPT_ERROR':
+                                showNotification('Script error: ' + response.message, 'error');
+                                break;
+                            default:
+                                showNotification('Error: ' + response.error, 'error');
                         }
+                    } else if (response.success) {  // success 체크 추가
+                        showNotification('Path converted successfully', 'success');
+                        setTimeout(() => {
+                            checkProjectStatus();
+                        }, 100);
                     }
-
-                    // Copy file to src folder
-                    if (!sourceFile.copy(srcFile.fsName)) {
-                        return JSON.stringify({error: 'COPY_FAILED'});
-                    }
-
-                    // Replace the source with the copied file
-                    activeItem.replace(srcFile);
-
-                    return JSON.stringify({
-                        success: true,
-                        newPath: srcFile.fsName
-                    });
-
                 } catch(e) {
-                    return JSON.stringify({
-                        error: 'SCRIPT_ERROR',
-                        message: e.toString()
-                    });
+                    console.error('Path conversion error:', e, 'Result:', result);
+                    showNotification('An error occurred during path conversion', 'error');
                 }
-            })()
-        `, function(result) {
-            setButtonLoading('convertBtn', false);
-            setFileListLoading(false);
-
-            try {
-                const response = JSON.parse(result);
-
-                if (response.error) {
-                    switch(response.error) {
-                        case 'NO_PROJECT':
-                            showNotification('Project is not saved', 'error');
-                            break;
-                        case 'NO_VALID_ITEM':
-                            showNotification('No valid item selected', 'error');
-                            break;
-                        case 'NO_SOURCE_FILE':
-                            showNotification('No source file', 'error');
-                            break;
-                        case 'ALREADY_IN_SRC':
-                            showNotification('File is already in src folder', 'error');
-                            break;
-                        case 'COPY_FAILED':
-                            showNotification('Failed to copy file', 'error');
-                            break;
-                        case 'FAILED_TO_CREATE_SRC':
-                            showNotification('Failed to create src folder', 'error');
-                            break;
-                        default:
-                            showNotification('Error: ' + response.message, 'error');
-                    }
-                } else if (response.success) {
-                    showNotification('Path conversion completed', 'success');
-                    setTimeout(() => {
-                        updateSelectedItem();
-                        checkProjectStatus();
-                    }, 100);
-                }
-            } catch(e) {
-                console.error('Error processing result:', e);
-                showNotification('Error occurred while processing result', 'error');
-            }
+            });
         });
     } catch(e) {
         setButtonLoading('convertBtn', false);
         setFileListLoading(false);
         console.error('Conversion error:', e);
-        showNotification('Error occurred during conversion', 'error');
+        showNotification('An error occurred during conversion', 'error');
     }
 }
 
 // Sync src folder
-async function syncSrcFolder() {
+function syncSrcFolder() {
     setButtonLoading('syncBtn', true);
     setFileListLoading(true);
-
-    csInterface.evalScript(`
-        (function() {
-            try {
-                if (!app.project || !app.project.file) {
-                    return JSON.stringify({error: 'NO_PROJECT'});
-                }
-
+    
+    const script = `
+        try {
+            if (!app.project || !app.project.file) {
+                '{"error": "NO_PROJECT"}';
+            } else {
                 var projectPath = app.project.file.parent.fsName;
                 var srcPath = projectPath + '/orbitools/src';
                 var srcFolder = new Folder(srcPath);
 
                 if (!srcFolder.exists) {
-                    return JSON.stringify({error: 'NO_SRC_FOLDER'});
-                }
+                    '{"error": "NO_SRC_FOLDER"}';
+                } else {
+                    var importedCount = 0;
+                    var skippedCount = 0;
+                    var failedCount = 0;
+                    var movedCount = 0;
 
-                var files = srcFolder.getFiles();
-                var importedCount = 0;
-
-                for (var i = 0; i < files.length; i++) {
-                    var file = files[i];
-                    if (file instanceof File) {
-                        try {
-                            var importFile = new File(file.fsName);
-                            if (importFile.exists) {
-                                app.project.importFile(new ImportOptions(importFile));
-                                importedCount++;
+                    // 폴더 찾기 또는 생성
+                    function findOrCreateFolder(folderName, parentFolder) {
+                        for (var i = 1; i <= parentFolder.numItems; i++) {
+                            var item = parentFolder.item(i);
+                            if (item instanceof FolderItem && item.name === folderName) {
+                                return item;
                             }
-                        } catch(importError) {
-                            // Skip files that fail to import
-                            continue;
+                        }
+                        var newFolder = app.project.items.addFolder(folderName);
+                        newFolder.parentFolder = parentFolder;
+                        return newFolder;
+                    }
+
+                    // 파일 경로로 프로젝트 아이템 찾기
+                    function findProjectItemByPath(filePath) {
+                        for (var i = 1; i <= app.project.numItems; i++) {
+                            var item = app.project.item(i);
+                            if (item instanceof FootageItem && item.mainSource && item.mainSource.file) {
+                                if (item.mainSource.file.fsName === filePath) {
+                                    return item;
+                                }
+                            }
+                        }
+                        return null;
+                    }
+
+                    // 실제 경로에서 상대 경로 구하기
+                    function getRelativePath(fullPath) {
+                        return fullPath.substring(srcPath.length + 1);
+                    }
+
+                    // 기본 폴더 구조 생성
+                    var orbitoolsFolder = findOrCreateFolder('orbitools', app.project.rootFolder);
+                    var srcProjectFolder = findOrCreateFolder('src', orbitoolsFolder);
+
+                    function processFolder(folder, projectFolder) {
+                        var files = folder.getFiles();
+                        
+                        for (var i = 0; i < files.length; i++) {
+                            var file = files[i];
+                            
+                            if (file instanceof Folder) {
+                                // 하위 폴더 처리
+                                var subFolder = findOrCreateFolder(file.name, projectFolder);
+                                processFolder(file, subFolder);
+                            } else if (file instanceof File) {
+                                try {
+                                    var filePath = file.fsName;
+                                    var existingItem = findProjectItemByPath(filePath);
+                                    
+                                    if (existingItem) {
+                                        // 이미 존재하는 아이템이면 올바른 폴더로 이동
+                                        if (existingItem.parentFolder !== projectFolder) {
+                                            existingItem.parentFolder = projectFolder;
+                                            movedCount++;
+                                        }
+                                        skippedCount++;
+                                        continue;
+                                    }
+
+                                    // 새로운 파일 임포트
+                                    var importFile = new File(filePath);
+                                    if (importFile.exists) {
+                                        var importOptions = new ImportOptions(importFile);
+                                        var importedItem = app.project.importFile(importOptions);
+                                        importedItem.parentFolder = projectFolder;
+                                        importedItem.comment = "synced_file:" + (new Date()).getTime();
+                                        importedCount++;
+                                    }
+                                } catch(importError) {
+                                    failedCount++;
+                                }
+                            }
                         }
                     }
+
+                    // 전체 폴더 구조 처리 시작
+                    processFolder(srcFolder, srcProjectFolder);
+
+                    '{"success": true, "imported": ' + importedCount + 
+                    ', "skipped": ' + skippedCount + 
+                    ', "moved": ' + movedCount +
+                    ', "failed": ' + failedCount + '}';
                 }
-
-                return JSON.stringify({
-                    success: true,
-                    count: importedCount
-                });
-
-            } catch(e) {
-                return JSON.stringify({
-                    error: 'SCRIPT_ERROR',
-                    message: e.toString()
-                });
             }
-        })()
-    `, function(result) {
+        } catch(e) {
+            '{"error": "SCRIPT_ERROR", "message": "' + e.toString().replace(/"/g, '\\"') + '"}';
+        }
+    `;
+
+    csInterface.evalScript(script, function(result) {
         setButtonLoading('syncBtn', false);
         setFileListLoading(false);
-
+        
         try {
             const response = JSON.parse(result);
             if (response.error) {
                 switch(response.error) {
                     case 'NO_PROJECT':
-                        showNotification('Project is not saved', 'error');
+                        showNotification('프로젝트가 저장되지 않았습니다.', 'error');
                         break;
                     case 'NO_SRC_FOLDER':
-                        showNotification('src folder does not exist', 'error');
+                        showNotification('src 폴더가 존재하지 않습니다', 'error');
                         break;
                     default:
-                        showNotification('Error: ' + response.message, 'error');
+                        showNotification('에러: ' + response.message, 'error');
                 }
             } else if (response.success) {
-                showNotification(response.count + ' files synchronized', 'success');
+                const message = `${response.imported}개 파일 동기화 완료` + 
+                              (response.skipped > 0 ? ` (${response.skipped}개 스킵)` : '') +
+                              (response.moved > 0 ? ` (${response.moved}개 이동됨)` : '') +
+                              (response.failed > 0 ? ` (${response.failed}개 실패)` : '');
+                showNotification(message, response.failed > 0 ? 'warning' : 'success');
                 setTimeout(checkProjectStatus, 100);
             }
         } catch(e) {
             console.error('Sync error:', e);
-            showNotification('Error occurred during sync', 'error');
+            showNotification('동기화 중 오류가 발생했습니다', 'error');
         }
     });
 }
@@ -557,49 +704,44 @@ function monitorSelection() {
 
 // Create src folder
 function createSrcFolder() {
-    csInterface.evalScript(`
-        (function() {
-            try {
-                if (!app.project.file) return JSON.stringify({error: 'NO_PROJECT'});
-
+    const script = `
+        try {
+            if (!app.project || !app.project.file) {
+                '{"error": "NO_PROJECT"}';
+            } else {
                 var projectPath = app.project.file.parent.fsName;
                 var orbitoolsPath = projectPath + '/orbitools';
                 var srcPath = orbitoolsPath + '/src';
-
+                
                 var orbitoolsFolder = new Folder(orbitoolsPath);
                 var srcFolder = new Folder(srcPath);
-
-                // Create orbitools folder if it doesn't exist
+                
                 if (!orbitoolsFolder.exists) {
                     if (!orbitoolsFolder.create()) {
-                        return JSON.stringify({error: 'FAILED_TO_CREATE_ORBITOOLS'});
+                        '{"error": "FAILED_TO_CREATE_ORBITOOLS"}';
                     }
                 }
-
-                // Create src folder if it doesn't exist
+                
                 if (!srcFolder.exists) {
                     if (!srcFolder.create()) {
-                        return JSON.stringify({error: 'FAILED_TO_CREATE_SRC'});
+                        '{"error": "FAILED_TO_CREATE_SRC"}';
                     }
                 }
-
-                return JSON.stringify({
-                    success: true,
-                    path: srcPath,
-                    orbitoolsExists: orbitoolsFolder.exists,
-                    srcExists: srcFolder.exists
-                });
-            } catch(e) {
-                return JSON.stringify({error: e.toString()});
+                
+                '{"success": true, "srcExists": ' + srcFolder.exists + '}';
             }
-        })()
-    `, function(result) {
+        } catch(e) {
+            '{"error": "SCRIPT_ERROR", "message": "' + e.toString().replace(/"/g, '\\"') + '"}';
+        }
+    `;
+    
+    csInterface.evalScript(script, function(result) {
         try {
             const response = JSON.parse(result);
             if (response.error) {
                 switch(response.error) {
                     case 'NO_PROJECT':
-                        showNotification('Project is not saved', 'error');
+                        showNotification('The project is not saved.', 'error');
                         break;
                     case 'FAILED_TO_CREATE_ORBITOOLS':
                         showNotification('Failed to create orbitools folder', 'error');
@@ -612,18 +754,17 @@ function createSrcFolder() {
                 }
             } else {
                 if (response.success && response.srcExists) {
-                    showNotification('Folders created successfully', 'success');
-                    // Update status after a slight delay
+                    showNotification('Folder created successfully', 'success');
                     setTimeout(() => {
                         checkProjectStatus();
                     }, 100);
                 } else {
-                    showNotification('Failed to verify folder creation status', 'error');
+                    showNotification('Folder creation failed', 'error');
                 }
             }
         } catch(e) {
-            console.error('Error creating folders:', e);
-            showNotification('Error occurred while creating folders', 'error');
+            console.error('Folder creation error:', e);
+            showNotification('An error occurred during folder creation', 'error');
         }
     });
 }
@@ -639,4 +780,197 @@ function initProjectMonitoring() {
     checkProjectStatus();
 }
 
-init();
+// 버버그 정보 수집 및 표시 함수
+function collectDebugInfo() {
+    setButtonLoading('debugBtn', true);
+
+    csInterface.evalScript(`
+        (function() {
+            // 즉시 로그 출력 테스트
+            $.writeln("=== Debug Information ===");
+            alert("Debug: Function Started");
+
+            try {
+                // 프로젝트 체크
+                if (!app.project) {
+                    $.writeln("No project found");
+                    alert("Debug: No project found");
+                    return JSON.stringify({error: 'NO_PROJECT'});
+                }
+
+                if (!app.project.file) {
+                    $.writeln("Project not saved");
+                    alert("Debug: Project not saved");
+                    return JSON.stringify({error: 'NO_PROJECT'});
+                }
+
+                // 프로젝트 경로 확인
+                var projectPath = app.project.file.parent.fsName;
+                $.writeln("Project Path: " + projectPath);
+                alert("Debug: Project Path: " + projectPath);
+
+                // 아이템 수 확인
+                $.writeln("Number of items: " + app.project.numItems);
+                alert("Debug: Number of items: " + app.project.numItems);
+
+                var debugInfo = {
+                    project: {
+                        exists: !!app.project,
+                        saved: !!app.project.file,
+                        path: projectPath,
+                        items: app.project.numItems
+                    },
+                    items: []
+                };
+
+                // 각 아이템 정보 출력
+                for (var i = 1; i <= app.project.numItems; i++) {
+                    var item = app.project.item(i);
+                    $.writeln("Item " + i + " type: " + item.typeName);
+                    
+                    if (item instanceof FootageItem) {
+                        $.writeln("FootageItem found: " + item.name);
+                        var itemInfo = {
+                            index: i,
+                            name: item.name,
+                            type: item.typeName
+                        };
+
+                        if (item.file) {
+                            $.writeln("File path: " + item.file.fsName);
+                            itemInfo.filePath = item.file.fsName;
+                            itemInfo.fileExists = item.file.exists;
+                        } else {
+                            $.writeln("No file associated");
+                            itemInfo.filePath = "No file associated";
+                        }
+                        
+                        debugInfo.items.push(itemInfo);
+                    }
+                }
+
+                return JSON.stringify(debugInfo, null, 2);
+
+            } catch(e) {
+                $.writeln("Error occurred: " + e.toString());
+                alert("Debug Error: " + e.toString());
+                return JSON.stringify({
+                    error: 'SCRIPT_ERROR',
+                    message: e.toString()
+                });
+            }
+        })()
+    `, function(result) {
+        setButtonLoading('debugBtn', false);
+        console.log("ExtendScript Result:", result);
+        
+        try {
+            const debugInfo = JSON.parse(result);
+            const debugElement = document.getElementById('debugInfo');
+            
+            if (debugInfo.error) {
+                showNotification('Error: ' + debugInfo.message, 'error');
+                debugElement.innerHTML = `<div class="error">Error: ${debugInfo.message}</div>`;
+                return;
+            }
+
+            // 디버그 정보 포맷팅
+            let htmlContent = `
+                <h3>Project Information:</h3>
+                <ul>
+                    <li>Project Exists: ${debugInfo.project.exists}</li>
+                    <li>Project Saved: ${debugInfo.project.saved}</li>
+                    <li>Project Path: ${debugInfo.project.path}</li>
+                    <li>Total Items: ${debugInfo.project.items}</li>
+                </ul>
+                <h3>Footage Items:</h3>
+                <ul>
+            `;
+
+            debugInfo.items.forEach(item => {
+                htmlContent += `
+                    <li>
+                        <strong>${item.name}</strong> (${item.type})
+                        <br>Index: ${item.index}
+                        <br>Path: ${item.filePath || 'N/A'}
+                        ${item.fileExists !== undefined ? `<br>File Exists: ${item.fileExists}` : ''}
+                    </li>
+                `;
+            });
+
+            htmlContent += '</ul>';
+            debugElement.innerHTML = htmlContent;
+            debugElement.classList.remove('hidden');
+            
+            showNotification('Debug information updated', 'success');
+        } catch(e) {
+            console.error('Debug info parse error:', e);
+            showNotification('An error occurred during debug info processing', 'error');
+        }
+    });
+}
+
+// Orbit 폴 여는 함수
+function openOrbitFolder() {
+    setButtonLoading('openOrbitBtn', true);
+    
+    const script = `
+        try {
+            if (!app.project || !app.project.file) {
+                '{"error": "NO_PROJECT"}';
+            } else {
+                var projectPath = app.project.file.parent.fsName;
+                var orbitoolsPath = projectPath + '/orbitools';
+                
+                var orbitFolder = new Folder(orbitoolsPath);
+                
+                if (!orbitFolder.exists) {
+                    '{"error": "NO_ORBIT_FOLDER"}';
+                } else {
+                    // 운영체제 확인 및 명령어 실행
+                    if ($.os.indexOf('Windows') !== -1) {
+                        system.callSystem('explorer "' + orbitoolsPath.replace(/\\//g, '\\\\') + '"');
+                    } else {
+                        system.callSystem('open "' + orbitoolsPath + '"');
+                    }
+                    
+                    // 폴더 존재 여부 재확인
+                    '{"success": true, "folderExists": ' + orbitFolder.exists + '}';
+                }
+            }
+        } catch(e) {
+            '{"error": "SCRIPT_ERROR", "message": "' + e.toString().replace(/"/g, '\\"') + '"}';
+        }
+    `;
+
+    csInterface.evalScript(script, function(result) {
+        try {
+            const response = JSON.parse(result);
+            if (response.error) {
+                switch(response.error) {
+                    case 'NO_PROJECT':
+                        showNotification('The project is not saved.', 'error');
+                        break;
+                    case 'NO_ORBIT_FOLDER':
+                        showNotification('The Orbit folder does not exist.', 'error');
+                        break;
+                    default:
+                        showNotification('Error: ' + response.error, 'error');
+                }
+            } else {
+                if (response.success && response.folderExists) {
+                    showNotification('Folder opened successfully', 'success');
+                    setTimeout(() => {
+                        checkProjectStatus();
+                    }, 100);
+                } else {
+                    showNotification('Failed to open folder', 'error');
+                }
+            }
+        } catch(e) {
+            console.error('Error in openOrbitFolder:', e);
+            showNotification('An error occurred while opening the folder', 'error');
+        }
+        setButtonLoading('openOrbitBtn', false);
+    });
+}

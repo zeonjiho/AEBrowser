@@ -4,20 +4,12 @@
     <meta charset="utf-8">
     <title>OrbitTools</title>
     <link rel="stylesheet" href="../client/style.css">
-    <script src="lib/CSInterface.js"></script>
-    <script>
-        // 디버그 콘솔 활성화
-        window.onerror = function(msg, url, line) {
-            console.error(`Error: ${msg}\nURL: ${url}\nLine: ${line}`);
-            return false;
-        };
-    </script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 </head>
 <body>
     <div class="header">
         <h1>
-            OrbitTools AE
-            <div class="version">v1.0.0</div>
+            OrbitTools™
         </h1>
         <div class="author">
             <span>HYPER</span>
@@ -42,20 +34,39 @@
             </div>
         </div>
         <div class="button-container">
-            <button id="createSrcBtn">
-                <span class="button-text">Create src Folder</span>
-                <span class="loading-spinner hidden"></span>
+            <button id="createSrcBtn" title="Create Orbit">
+                <span class="material-icons-round">add_circle</span>
+                <span class="button-text">Create</span>
             </button>
-            <button id="convertBtn">
-                <span class="button-text">Convert to Relative Path</span>
-                <span class="loading-spinner hidden"></span>
+            <button id="convertBtn" title="Convert to Relative Path">
+                <span class="material-icons-round">swap_horiz</span>
+                <span class="button-text">Convert</span>
             </button>
-            <button id="syncBtn">
-                <span class="button-text">Sync src Folder</span>
-                <span class="loading-spinner hidden"></span>
+            <button id="syncBtn" title="Sync">
+                <span class="material-icons-round">sync</span>
+                <span class="button-text">Sync</span>
+            </button>
+            <button id="openOrbitBtn" title="Open Orbit">
+                <span class="material-icons-round">folder_open</span>
+                <span class="button-text">Open</span>
             </button>
         </div>
+        <div class="debug-section">
+            <button id="debugBtn" class="debug-button">
+                <span class="material-icons-round">bug_report</span>
+                <span class="button-text">Debug Info</span>
+            </button>
+            <div id="debugInfo" class="debug-info hidden"></div>
+        </div>
+        <div class="version-info">
+            <span class="version">v0.0.1</span> <br>
+            <span class="version">© 2025 HYPER Inc. All Rights Reserved.</span>
+        </div>
     </div>
+    <script src="./lib/CSInterface.js"></script>
+    <script>
+        console.log("Starting script load...");
+    </script>
     <script src="../client/main.jsx"></script>
 </body>
 </html> 
