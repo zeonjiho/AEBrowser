@@ -602,7 +602,7 @@ function syncSrcFolder() {
                               (response.sequences > 0 ? ` (${response.sequences}개 시퀀스)` : '') +
                               (response.skipped > 0 ? ` (${response.skipped}개 스킵)` : '') +
                               (response.moved > 0 ? ` (${response.moved}개 이동됨)` : '') +
-                              (response.failed > 0 ? ` (${response.failed}개 실패)` : '');
+                              (response.failed > 0 ? ` (${response.failed}개 ��패)` : '');
                 showNotification(message, response.failed > 0 ? 'warning' : 'success');
                 setTimeout(checkProjectStatus, 100);
             }
@@ -1112,4 +1112,112 @@ function openOrbitFolder() {
         }
         setButtonLoading('openOrbitBtn', false);
     });
+}
+
+// CSInterface 초기화 및 상태 체크
+let csInterface;
+try {
+    csInterface = new CSInterface();
+    console.log("CSInterface initialized successfully");
+} catch(e) {
+    console.error("CSInterface initialization failed:", e);
+}
+
+// 연결 상태 확인 함수
+function checkConnection() {
+    try {
+        csInterface.evalScript('app.version', function(result) {
+            if (result) {
+                console.log("Connected to After Effects:", result);
+                return true;
+            }
+            return false;
+        });
+    } catch(e) {
+        console.error("Connection check failed:", e);
+        return false;
+    }
+}
+
+// 모든 evalScript 호출에 대한 래퍼 함수
+function safeEvalScript(script, callback) {
+    if (!csInterface) {
+        console.error("CSInterface not initialized");
+        return;
+    }
+
+    try {
+        csInterface.evalScript(script, function(result) {
+            if (result === "EvalScript error.") {
+                console.error("ExtendScript evaluation failed");
+                if (callback) callback(null);
+                return;
+            }
+            if (callback) callback(result);
+        });
+    } catch(e) {
+        console.error("evalScript error:", e);
+        if (callback) callback(null);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 초기 연결 상태 확인
+    if (checkConnection()) {
+        initializeEventListeners();
+    } else {
+        // 연결 재시도
+        setTimeout(checkConnection, 1000);
+    }
+});
+
+function initializeEventListeners() {
+    // 기존의 이벤트 리스너들을 여기로 이동
+    document.getElementById('debugBtn').addEventListener('click', function() {
+        safeEvalScript(`
+            (function() {
+                try {
+                    return JSON.stringify({
+                        version: app.version,
+                        project: app.project ? {
+                            name: app.project.file ? app.project.file.name : 'Untitled',
+                            items: app.project.numItems
+                        } : null
+                    });
+                } catch(e) {
+                    return JSON.stringify({ error: e.toString() });
+                }
+            })()
+        `, function(result) {
+            if (result) {
+                const debugInfo = document.getElementById('debugInfo');
+                debugInfo.textContent = JSON.stringify(JSON.parse(result), null, 2);
+                debugInfo.classList.toggle('hidden');
+            }
+        });
+    });
+}
+
+function evalScriptWithTimeout(script, callback, timeout = 5000) {
+    let timeoutId;
+    
+    const timeoutPromise = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error('ExtendScript evaluation timed out'));
+        }, timeout);
+    });
+
+    const evalPromise = new Promise((resolve) => {
+        safeEvalScript(script, (result) => {
+            clearTimeout(timeoutId);
+            resolve(result);
+        });
+    });
+
+    Promise.race([evalPromise, timeoutPromise])
+        .then(callback)
+        .catch((error) => {
+            console.error('Evaluation failed:', error);
+            callback(null);
+        });
 }
