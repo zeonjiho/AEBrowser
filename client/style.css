@@ -1,32 +1,30 @@
 :root {
     /* 알림 기본 크기 변수 수정 */
-    --notification-base-size: 1.0; /* 1.2에서 1.0으로 축소 */
+    --notification-base-size: 1.0;
+    /* 1.2에서 1.0으로 축소 */
     --notification-font-base: calc(12px * var(--notification-base-size));
-    --notification-icon-size: calc(1.6em * var(--notification-base-size)); /* 2em에서 1.6em으로 축소 */
-    --notification-icon-svg-size: calc(1em * var(--notification-base-size)); /* 1.2em에서 1em으로 축소 */
+    --notification-icon-size: calc(1.6em * var(--notification-base-size));
+    /* 2em에서 1.6em으로 축소 */
+    --notification-icon-svg-size: calc(1em * var(--notification-base-size));
+    /* 1.2em에서 1em으로 축소 */
     --notification-padding: calc(0.6em * var(--notification-base-size));
     --notification-gap: calc(0.6em * var(--notification-base-size));
-    
     /* 색상 시스템 */
     --bg-primary: #151515;
     --bg-secondary: #2a2a2a;
     --bg-tertiary: #1a1a1a;
-    
     /* 버튼 색상 */
     --button-bg: #1f1f1f;
     --button-hover: #313131;
     --button-disabled: #333333;
-    
     /* 텍스트 색상 */
     --text-primary: #ffffff;
     --text-secondary: #888888;
     --text-disabled: #666666;
-    
     /* 상태 색상 */
     --status-success: #4CAF50;
     --status-error: #F44336;
     --status-loading: rgba(255, 255, 255, 0.3);
-    
     /* 보더 색상 */
     --border-color: #3a3a3a;
 }
@@ -37,9 +35,12 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: Arial, sans-serif;
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-    overflow: hidden; /* 스크롤 방지 추가 */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    overflow: hidden;
+    /* 스크롤 방지 추가 */
 }
 
 .container {
@@ -48,7 +49,8 @@ body {
     gap: 10px;
     position: relative;
     min-height: calc(100vh - 40px);
-    overflow: hidden; /* 스크롤 방지 추가 */
+    overflow: hidden;
+    /* 스크롤 방지 추가 */
 }
 
 .header {
@@ -57,10 +59,14 @@ body {
     font-size: small;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
-    user-select: none; /* 텍스트 선택 방지 */
-    -webkit-user-select: none; /* Safari 지원 */
-    -moz-user-select: none; /* Firefox 지원 */
-    -ms-user-select: none; /* IE/Edge 지원 */
+    user-select: none;
+    /* 텍스트 선택 방지 */
+    -webkit-user-select: none;
+    /* Safari 지원 */
+    -moz-user-select: none;
+    /* Firefox 지원 */
+    -ms-user-select: none;
+    /* IE/Edge 지원 */
 }
 
 .header h1 {
@@ -70,7 +76,8 @@ body {
     align-items: baseline;
     justify-content: center;
     gap: 8px;
-    cursor: default; /* 마우스 커서를 기본으로 설정 */
+    cursor: default;
+    /* 마우스 커서를 기본으로 설정 */
 }
 
 .version {
@@ -84,7 +91,8 @@ body {
     color: #888;
     letter-spacing: 1px;
     margin-top: px;
-    user-select: none; /* 작성자 이름도 선택 방지 */
+    user-select: none;
+    /* 작성자 이름도 선택 방지 */
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -200,18 +208,24 @@ button {
 }
 
 button .material-icons-round {
-    font-size: 18px;  /* 20px에서 18px로 축소 */
+    font-size: 18px;
+    /* 20px에서 18px로 축소 */
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px; /* 너비 고정 */
-    height: 18px; /* 높이 고정 */
+    width: 18px;
+    /* 너비 고정 */
+    height: 18px;
+    /* 높이 고정 */
 }
 
+
 /* 싱크 버튼 아이콘 특별 처리 */
+
 #syncBtn .material-icons-round {
-    font-size: 22px; /* 싱크 아이콘만 더 작게 */
+    font-size: 22px;
+    /* 싱크 아이콘만 더 작게 */
 }
 
 button .button-text {
@@ -219,7 +233,9 @@ button .button-text {
     opacity: 0.8;
 }
 
+
 /* 호버 효과 */
+
 button:hover {
     background-color: var(--button-hover);
     border: 1px solid #43ff32;
@@ -229,28 +245,32 @@ button:hover .material-icons-round {
     transform: scale(1.1);
 }
 
+
 /* 작은 화면에서는 텍스트 숨기기 */
+
 @media screen and (max-width: 480px) {
     button .button-text {
         display: none;
     }
-    
     button {
         padding: 8px;
     }
-    
     button .material-icons-round {
         font-size: 18px;
     }
 }
 
+
 /* 로딩 상태일 때 */
+
 button.loading .material-icons-round {
     animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .loading-spinner {
@@ -410,16 +430,20 @@ button:disabled .loading-spinner {
     text-transform: uppercase;
 }
 
+
 /* 작은 화면에서의 크기 조정 */
+
 @media screen and (max-width: 480px) {
-    :root {
+     :root {
         --notification-base-size: 1.1;
     }
 }
 
+
 /* 큰 화면에서의 크기 조정 */
+
 @media screen and (min-width: 1200px) {
-    :root {
+     :root {
         --notification-base-size: 1.3;
     }
 }
@@ -454,10 +478,14 @@ button:disabled .loading-spinner {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
+
 /* 디버그 섹션 스타일 */
+
 .debug-section {
     margin-top: 10px;
     border-top: 1px solid var(--border-color);
@@ -509,15 +537,20 @@ button:disabled .loading-spinner {
     border-radius: 3px;
 }
 
+
 /* 버전 정보 스타일 수정 */
+
 .version-info {
-    position: fixed; /* viewport 기준 고정 */
+    position: fixed;
+    /* viewport 기준 고정 */
     bottom: 8px;
     left: 0;
     right: 0;
     text-align: center;
-    z-index: 1; /* 다른 요소들 위에 표시 */
-    pointer-events: none; /* 클릭 이벤트 무시 */
+    z-index: 1;
+    /* 다른 요소들 위에 표시 */
+    pointer-events: none;
+    /* 클릭 이벤트 무시 */
 }
 
 .version {
@@ -526,12 +559,16 @@ button:disabled .loading-spinner {
     font-weight: normal;
 }
 
+
 /* 기존 버전 관련 스타일 제거 */
+
 .header h1 .version {
     display: none;
 }
 
+
 /* 스크롤바 숨김 */
+
 ::-webkit-scrollbar {
     display: none;
 }
@@ -554,3 +591,49 @@ button.loading {
     transition: opacity 0.2s;
 }
 
+
+/* 프로그레스바 스타일 추가 */
+
+.progress-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    text-align: center;
+    z-index: 3;
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: var(--bg-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--status-success);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    color: var(--text-primary);
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+
+/* 로딩 오버레이 수정 */
+
+.loading-overlay.with-progress .spinner {
+    display: none;
+}
+
+.loading-overlay.with-progress .progress-container {
+    display: block;
+}

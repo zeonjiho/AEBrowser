@@ -330,6 +330,79 @@ function convertToRelativePath() {
     }
 }
 
+// 프로그레스바 업데이트 함수 추가
+function updateProgress(progress, text) {
+    const overlay = document.getElementById('loadingOverlay');
+    const progressBar = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressText');
+    
+    overlay.classList.add('with-progress');
+    progressBar.style.width = `${progress}%`;
+    if (text) {
+        progressText.textContent = text;
+    }
+}
+
+// syncSrcFolder 함수 내부의 processFolder 함수 수정
+function processFolder(folder, projectFolder) {
+    var files = folder.getFiles();
+    var totalFiles = files.length;
+    var processedFiles = 0;
+    
+    for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        processedFiles++;
+        var progress = (processedFiles / totalFiles) * 100;
+        
+        updateProgress(progress, '파일 처리 중... (' + processedFiles + '/' + totalFiles + ')');
+        
+        if (file instanceof Folder) {
+            var subFolder = findOrCreateFolder(file.name, projectFolder);
+            processFolder(file, subFolder);
+        } else if (file instanceof File) {
+            // 시퀀스 처리 시도
+            if (!processSequence(file, projectFolder)) {
+                // 일반 파일 처리
+                try {
+                    var filePath = file.fsName;
+                    var existingItem = findProjectItemByPath(filePath);
+                    
+                    if (existingItem) {
+                        if (existingItem.parentFolder !== projectFolder) {
+                            existingItem.parentFolder = projectFolder;
+                            movedCount++;
+                        }
+                        skippedCount++;
+                        continue;
+                    }
+
+                    var importFile = new File(filePath);
+                    if (importFile.exists) {
+                        var importOptions = new ImportOptions(importFile);
+                        var importedItem = app.project.importFile(importOptions);
+                        importedItem.parentFolder = projectFolder;
+                        importedItem.comment = "synced_file:" + (new Date()).getTime();
+                        importedCount++;
+                    }
+                } catch(importError) {
+                    failedCount++;
+                }
+            }
+        }
+    }
+}
+
+// 작업 완료 시 프로그레스바 초기화
+function resetProgress() {
+    const overlay = document.getElementById('loadingOverlay');
+    const progressBar = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressText');
+    
+    overlay.classList.remove('with-progress');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'work in progress...';
+}
+
 // Sync src folder
 function syncSrcFolder() {
     setButtonLoading('syncBtn', true);
@@ -351,11 +424,29 @@ function syncSrcFolder() {
                     var skippedCount = 0;
                     var failedCount = 0;
                     var movedCount = 0;
+                    var sequenceCount = 0;
+
+                    // 파일명에서 시퀀스 번호를 추출하는 함수
+                    function getSequenceInfo(filename) {
+                        var match = filename.match(/(.*?)(\\d+)([^\\d]*?)$/);
+                        if (match) {
+                            return {
+                                baseName: match[1],
+                                number: match[2],
+                                extension: match[3],
+                                isSequence: true
+                            };
+                        }
+                        return {
+                            baseName: filename,
+                            isSequence: false
+                        };
+                    }
 
                     // 폴더 찾기 또는 생성
                     function findOrCreateFolder(folderName, parentFolder) {
                         for (var i = 1; i <= parentFolder.numItems; i++) {
-                            var item = parentFolder.item(i);
+                            var item = item(i);
                             if (item instanceof FolderItem && item.name === folderName) {
                                 return item;
                             }
@@ -365,22 +456,60 @@ function syncSrcFolder() {
                         return newFolder;
                     }
 
-                    // 파일 경로로 프로젝트 아이템 찾기
-                    function findProjectItemByPath(filePath) {
-                        for (var i = 1; i <= app.project.numItems; i++) {
-                            var item = app.project.item(i);
-                            if (item instanceof FootageItem && item.mainSource && item.mainSource.file) {
-                                if (item.mainSource.file.fsName === filePath) {
-                                    return item;
-                                }
+                    // 시퀀스 파일들을 처리하는 함수
+                    function processSequence(file, projectFolder) {
+                        var sequenceInfo = getSequenceInfo(file.name);
+                        if (!sequenceInfo.isSequence) return false;
+
+                        var sequenceFolderName = sequenceInfo.baseName.replace(/[\\s._-]+$/, '');
+                        var sequencePath = srcPath + '/' + sequenceFolderName;
+                        var sequenceFolder = new Folder(sequencePath);
+
+                        if (!sequenceFolder.exists) {
+                            sequenceFolder.create();
+                        }
+
+                        // 같은 시퀀스의 모든 파일 찾기
+                        var sourceFolder = file.parent;
+                        var allFiles = sourceFolder.getFiles();
+                        var sequencePattern = new RegExp(
+                            '^' + 
+                            sequenceInfo.baseName.replace(/([.?*+^$[\\]\\\\(){}|-])/g, "\\\\$1") + 
+                            '\\\\d+' + 
+                            sequenceInfo.extension.replace(/([.?*+^$[\\]\\\\(){}|-])/g, "\\\\$1") + 
+                            '$'
+                        );
+
+                        var sequenceFiles = [];
+                        for (var i = 0; i < allFiles.length; i++) {
+                            if (sequencePattern.test(allFiles[i].name)) {
+                                sequenceFiles.push(allFiles[i]);
                             }
                         }
-                        return null;
-                    }
 
-                    // 실제 경로에서 상대 경로 구하기
-                    function getRelativePath(fullPath) {
-                        return fullPath.substring(srcPath.length + 1);
+                        // 각 시퀀스 파일 복사
+                        for (var j = 0; j < sequenceFiles.length; j++) {
+                            var targetPath = sequencePath + '/' + sequenceFiles[j].name;
+                            if (!(new File(targetPath)).exists) {
+                                sequenceFiles[j].copy(targetPath);
+                                importedCount++;
+                            } else {
+                                skippedCount++;
+                            }
+                        }
+
+                        // 프로젝트에 시퀀스 임포트
+                        var importFile = new File(sequencePath + '/' + file.name);
+                        if (importFile.exists) {
+                            var importOptions = new ImportOptions(importFile);
+                            importOptions.sequence = true; // 시퀀스로 임포트
+                            var importedItem = app.project.importFile(importOptions);
+                            importedItem.parentFolder = projectFolder;
+                            importedItem.comment = "synced_sequence:" + (new Date()).getTime();
+                            sequenceCount++;
+                        }
+
+                        return true;
                     }
 
                     // 기본 폴더 구조 생성
@@ -389,40 +518,47 @@ function syncSrcFolder() {
 
                     function processFolder(folder, projectFolder) {
                         var files = folder.getFiles();
+                        var totalFiles = files.length;
+                        var processedFiles = 0;
                         
                         for (var i = 0; i < files.length; i++) {
                             var file = files[i];
+                            processedFiles++;
+                            var progress = (processedFiles / totalFiles) * 100;
+                            
+                            updateProgress(progress, '파일 처리 중... (' + processedFiles + '/' + totalFiles + ')');
                             
                             if (file instanceof Folder) {
-                                // 하위 폴더 처리
                                 var subFolder = findOrCreateFolder(file.name, projectFolder);
                                 processFolder(file, subFolder);
                             } else if (file instanceof File) {
-                                try {
-                                    var filePath = file.fsName;
-                                    var existingItem = findProjectItemByPath(filePath);
-                                    
-                                    if (existingItem) {
-                                        // 이미 존재하는 아이템이면 올바른 폴더로 이동
-                                        if (existingItem.parentFolder !== projectFolder) {
-                                            existingItem.parentFolder = projectFolder;
-                                            movedCount++;
+                                // 시퀀스 처리 시도
+                                if (!processSequence(file, projectFolder)) {
+                                    // 일반 파일 처리
+                                    try {
+                                        var filePath = file.fsName;
+                                        var existingItem = findProjectItemByPath(filePath);
+                                        
+                                        if (existingItem) {
+                                            if (existingItem.parentFolder !== projectFolder) {
+                                                existingItem.parentFolder = projectFolder;
+                                                movedCount++;
+                                            }
+                                            skippedCount++;
+                                            continue;
                                         }
-                                        skippedCount++;
-                                        continue;
-                                    }
 
-                                    // 새로운 파일 임포트
-                                    var importFile = new File(filePath);
-                                    if (importFile.exists) {
-                                        var importOptions = new ImportOptions(importFile);
-                                        var importedItem = app.project.importFile(importOptions);
-                                        importedItem.parentFolder = projectFolder;
-                                        importedItem.comment = "synced_file:" + (new Date()).getTime();
-                                        importedCount++;
+                                        var importFile = new File(filePath);
+                                        if (importFile.exists) {
+                                            var importOptions = new ImportOptions(importFile);
+                                            var importedItem = app.project.importFile(importOptions);
+                                            importedItem.parentFolder = projectFolder;
+                                            importedItem.comment = "synced_file:" + (new Date()).getTime();
+                                            importedCount++;
+                                        }
+                                    } catch(importError) {
+                                        failedCount++;
                                     }
-                                } catch(importError) {
-                                    failedCount++;
                                 }
                             }
                         }
@@ -434,7 +570,8 @@ function syncSrcFolder() {
                     '{"success": true, "imported": ' + importedCount + 
                     ', "skipped": ' + skippedCount + 
                     ', "moved": ' + movedCount +
-                    ', "failed": ' + failedCount + '}';
+                    ', "failed": ' + failedCount +
+                    ', "sequences": ' + sequenceCount + '}';
                 }
             }
         } catch(e) {
@@ -445,6 +582,7 @@ function syncSrcFolder() {
     csInterface.evalScript(script, function(result) {
         setButtonLoading('syncBtn', false);
         setFileListLoading(false);
+        resetProgress();
         
         try {
             const response = JSON.parse(result);
@@ -461,6 +599,7 @@ function syncSrcFolder() {
                 }
             } else if (response.success) {
                 const message = `${response.imported}개 파일 동기화 완료` + 
+                              (response.sequences > 0 ? ` (${response.sequences}개 시퀀스)` : '') +
                               (response.skipped > 0 ? ` (${response.skipped}개 스킵)` : '') +
                               (response.moved > 0 ? ` (${response.moved}개 이동됨)` : '') +
                               (response.failed > 0 ? ` (${response.failed}개 실패)` : '');
